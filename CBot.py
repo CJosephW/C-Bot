@@ -76,26 +76,48 @@ async def on_message(message):
         await message.channel.send('added %s on %s' %(sorted_message[1], sorted_message[2]))
     if 'cpoll' in message.content.lower():
 
-        message_channel = client.get_channel(367796816625926146)
-
-        #and str(reaction.emoji) == '✅'
+        message_channel = client.get_channel(616731567439478785)
 
         poll_message = await message_channel.send(f"***{message.content[6:]}***")
         await poll_message.add_reaction(emoji ='✅')
         await poll_message.add_reaction(emoji = '❌')
-        
-        check_count = 1
-        cross_count = 1
+
         def pred(m):
-            return m.author == message.author and m.channel == message.channel
+            return m.author == message.author and m.channel == message.channel and m.content == "end_poll"
             
         try:
-            msg = await client.wait_for('end_poll', check=pred, timeout=60.0)
+            msg = await client.wait_for('message', check=pred, timeout=1000.0)
+            reactions = (await message_channel.fetch_message(poll_message.id)).reactions
+            print(reactions)
+            
+            check_count = 0
+            cross_count = 0
+
+            for reaction in reactions:
+                if reaction.emoji == '✅':
+                    check_count = reaction.count
+                if reaction.emoji == '❌':
+                    cross_count = reaction.count
+
+            if check_count > cross_count:
+                await message_channel.send(f'The poll has ened with overall vote being ***YES*** (YES: {check_count}, NO: {cross_count})')
+            if check_count < cross_count:
+                await message_channel.send(f'The poll has ened with overall vote being ***NO*** (YES: {check_count}, NO: {cross_count})')
+            if check_count == cross_count:
+                await message_channel.send('***POLL RESULT***: \n https://tenor.com/view/mark-wahlberg-wahlberg-tie-oscar-gif-9081826')
+            await poll_message.delete()
 
         except asyncio.TimeoutError:
-            await message_channel.send('You took too long...')
-        else:
-            await message_channel.send('poll ended')
+            await message_channel.send('The timer has run out here are the results')
+            
+            if check_count > cross_count:
+                await message_channel.send(f'The poll has ened with overall vote being ***YES*** (YES: {check_count}, NO: {cross_count})')
+            if check_count < cross_count:
+                await message_channel.send(f'The poll has ened with overall vote being ***NO*** (YES: {check_count}, NO: {cross_count})')
+            if check_count == cross_count:
+                await message_channel.send('***POLL RESULT***: \n https://tenor.com/view/mark-wahlberg-wahlberg-tie-oscar-gif-9081826')
+            
+            await poll_message.delete()
 
 
 @tasks.loop(hours = 24)
