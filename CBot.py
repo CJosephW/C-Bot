@@ -9,12 +9,25 @@ from discord.ext.tasks import loop
 import requests
 import json
 import asyncio
-#r = requests.get("https://api.tenor.com/v1/search_suggestions?key=%s&q=%s&limit=%s" % (apikey, search, lmt))
+import requests
+
+url = "your imgur album api link"
 
 consumer_key= environ.get("TWITTER_CONSUMER_KEY")
 consumer_secret=environ.get("TWITTER_CONSUMER_SECRET")
 access_token_key=environ.get("TWITTER_ACCESS_KEY")
 access_token_secret=environ.get("TWITTER_TOKEN_SECRET")
+
+
+payload = {}
+files = {}
+headers = {
+    'Authorization' : 'Client-ID your client id'
+}
+
+response = requests.request("GET", url, headers=headers, data = payload, files = files)
+
+print(response.text.encode('utf8'))
 
 tenor_key = environ.get("TENOR_KEY")
 
@@ -26,17 +39,23 @@ api = tweepy.API(auth)
 birthday_gif = 'happy birthday'
 
 birthday_dict = {
-    "<@!157658976434126848>" : "04/04"
 }
 
 r = requests.get("https://api.tenor.com/v1/search?key=%s&q=%s&limit=%s" % (tenor_key, birthday_gif, 50))
 print("https://api.tenor.com/v1/search?key=%s&q=%s&limit=%s" % (tenor_key, birthday_gif, 50))
 data = r.content
 gif_json = json.loads(data)
-print(gif_json)
 gif_urls = []
 for gif in gif_json['results']:
     gif_urls.append(gif['url'])
+
+imgur_content = response.content
+imgur_response = json.loads(imgur_content)
+
+cameron_pictures = []
+for picture in imgur_response['data']:
+    cameron_pictures.append(picture['link'])
+    print(picture['link'])
 
 birthday_wish_channel = 616731567439478785
 TOKEN = environ.get('CBOT_TOKEN')
@@ -50,11 +69,9 @@ async def on_ready():
     
 @client.event
 async def on_message(message):
-    print(message.author.name)
+
     if message.author == client.user:
         return
-    print(message.content)
-     #recent_tweets = api.user_timeline(screen_name = user, count = 200)
 
     if 'randomtweet' in message.content.lower():
         message_split = message.content.split()
@@ -71,14 +88,17 @@ async def on_message(message):
 
     if 'add-birthday' in message.content.lower():
         sorted_message = message.content.split()
-
         birthday_dict[sorted_message[1]] = sorted_message[2]
+
         await message.channel.send('added %s on %s' %(sorted_message[1], sorted_message[2]))
+
+    if 'cool_guy' in message.content.lower():
+        random_picture = random.choice(cameron_pictures)
+        await message.channel.send(random_picture)
     if 'cpoll' in message.content.lower():
-
         message_channel = client.get_channel(616731567439478785)
-
-        poll_message = await message_channel.send(f"***{message.content[6:]}***")
+        poll_message = await message.channel.send(f"***{message.content[6:]}***")
+        
         await poll_message.add_reaction(emoji ='✅')
         await poll_message.add_reaction(emoji = '❌')
 
@@ -88,8 +108,6 @@ async def on_message(message):
         try:
             msg = await client.wait_for('message', check=pred, timeout=1000.0)
             reactions = (await message_channel.fetch_message(poll_message.id)).reactions
-            print(reactions)
-            
             check_count = 0
             cross_count = 0
 
@@ -122,7 +140,6 @@ async def on_message(message):
 
 @tasks.loop(hours = 24)
 async def check_birthdays():
-    print('fuck off')
     message_channel = client.get_channel(616731567439478785)
     today = date.today()
     d3 = today.strftime("%m/%d")
