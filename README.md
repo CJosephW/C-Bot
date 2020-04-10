@@ -1,5 +1,6 @@
 # C-Bot
 Discord bot for managing my Discord Server 
+
 *IN PROGRESS*
 
 # Dependencies
